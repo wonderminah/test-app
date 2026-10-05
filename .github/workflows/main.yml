@@ -9,5 +9,11 @@ jobs:
     runs-on: ubuntu-latest # GitHub에서 제공하는 실행 환경
 
     steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+    
+      - name: 파일 확인
+        run: ls -la
+    
       - name: Hello World 출력
         run: echo "Hello World"
