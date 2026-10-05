@@ -2,7 +2,13 @@ name: CI 연습
 
 on:
   workflow_dispatch: # GitHub에서 수동 실행 버튼 활성화
-  push: # push할 때도 실행
+  push: # main에 push할 때 실행
+    branches: [main]
+
+# 여러 실행이 같은 EC2 컨테이너를 동시에 교체하지 않도록 순서대로 실행합니다.
+concurrency:
+  group: test-app-ec2-deploy
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -41,3 +47,57 @@ jobs:
         run: |
           docker tag test-app:latest "$ECR_REPOSITORY:$IMAGE_TAG"
           docker push "$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: EC2 배포
+        if: github.ref == 'refs/heads/main'
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          IMAGE: 135133927568.dkr.ecr.ap-northeast-1.amazonaws.com/test-app
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          trap 'rm -f ~/.ssh/ec2_key' EXIT
+
+          ssh -i ~/.ssh/ec2_key \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            "$EC2_USER@$EC2_HOST" \
+            bash -s -- "$IMAGE:$IMAGE_TAG" <<'REMOTE'
+          set -euo pipefail
+          IMAGE="$1"
+          REGISTRY="${IMAGE%%/*}"
+
+          aws ecr get-login-password --region ap-northeast-1 \
+            | sudo docker login --username AWS --password-stdin "$REGISTRY"
+
+          sudo docker pull "$IMAGE"
+
+          if sudo docker container inspect test-app-ecr >/dev/null 2>&1; then
+            sudo docker rm -f test-app-ecr
+          fi
+
+          sudo docker run -d \
+            --name test-app-ecr \
+            --restart unless-stopped \
+            -p 8000:8000 \
+            "$IMAGE"
+
+          for attempt in $(seq 1 15); do
+            if response=$(curl -fsS --max-time 3 http://localhost:8000/) \
+              && [ "$response" = "Hello World" ]; then
+              echo "배포 성공"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          sudo docker logs --tail 50 test-app-ecr
+          exit 1
+          REMOTE
