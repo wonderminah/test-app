@@ -2,6 +2,7 @@ name: CI 연습
 
 on:
   workflow_dispatch: # GitHub에서 수동 실행 버튼 활성화
+  push: # push할 때도 실행
 
 jobs:
   hello:
