@@ -1,0 +1,12 @@
+name: CI 연습
+
+on:
+  workflow_dispatch: # GitHub에서 수동 실행 버튼 활성화
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest # GitHub에서 제공하는 실행 환경
+
+    steps:
+      - name: Hello World 출력
+        run: echo "Hello World"
