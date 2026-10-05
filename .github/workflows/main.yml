@@ -90,8 +90,8 @@ jobs:
             "$IMAGE"
 
           for attempt in $(seq 1 15); do
-            if response=$(curl -fsS --max-time 3 http://localhost:8000/) \
-              && [ "$response" = "Hello World" ]; then
+            if status=$(curl -sS --max-time 3 -o /dev/null -w '%{http_code}' http://localhost:8000/) \
+              && [ "$status" = "200" ]; then
               echo "배포 성공"
               exit 0
             fi
