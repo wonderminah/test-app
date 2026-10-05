@@ -32,11 +32,7 @@ jobs:
         run: docker build -t test-app .
 
       - name: Docker 안에서 테스트
-        run: |
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE/tests:/app/tests:ro" \
-            test-app \
-            sh -c "python -m pip install pytest httpx && python -m pytest -v tests"
+        run: docker run --rm test-app python -m pytest -v tests
 
       - name: ECR에 이미지 push
         env:
