@@ -37,3 +37,11 @@ jobs:
             -v "$GITHUB_WORKSPACE/tests:/app/tests:ro" \
             test-app \
             sh -c "python -m pip install pytest httpx && python -m pytest -v tests"
+
+      - name: ECR에 이미지 push
+        env:
+          ECR_REPOSITORY: 135133927568.dkr.ecr.ap-northeast-1.amazonaws.com/test-app
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
+        run: |
+          docker tag test-app:latest "$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REPOSITORY:$IMAGE_TAG"
