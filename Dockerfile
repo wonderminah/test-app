@@ -10,8 +10,8 @@ COPY requirements.txt .
 # 의존성을 설치하고, 이미지 크기를 줄이기 위해 pip 다운로드 캐시를 남기지 않습니다.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# FastAPI 앱 코드를 작업 폴더로 복사합니다.
-COPY main.py .
+# .dockerignore에 지정된 파일을 제외한 프로젝트 전체를 작업 폴더로 복사합니다.
+COPY . .
 
 # 앱이 8000 포트를 사용함을 명시합니다. 실제 포트 연결은 docker run -p 등으로 설정합니다.
 EXPOSE 8000
